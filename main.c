@@ -3,6 +3,7 @@
 #include "file.h"
 #include "menu.h"
 #include "cursor.h"
+#include "editor.h"
 #include <stdio.h>
 
 /* Declare Windows procedure */
@@ -214,6 +215,25 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
     case VK_NEXT:
       SendMessage(hwnd, WM_VSCROLL, SB_PAGEDOWN, 0L);
       break;
+    case VK_RETURN:
+      addReturn(&buffer, &cursor);
+      //cursor.storagePos += 2;
+      cursor.stringPos++;
+      viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[actual->strBegIndices[firstString]]);
+      setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
+      metricsUpdate(&metrics, actual, hwnd, firstString);
+      InvalidateRect(hwnd, NULL, TRUE);
+      break;
+
+    case VK_BACK:
+      if (deleteChar(&buffer, &cursor))
+      {
+        viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[actual->strBegIndices[firstString]]);
+        setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
+        metricsUpdate(&metrics, actual, hwnd, firstString);
+        InvalidateRect(hwnd, NULL, TRUE);
+      }
+      break;
     }
     break;
 
@@ -281,15 +301,26 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
   case WM_LBUTTONDOWN:
     cursor.stringPos = HIWORD(lParam) / metrics.charY + firstString;
-    cursor.storagePos = max(0, LOWORD(lParam) / metrics.charX - 1) + cursor.stringPos;
+    cursor.storagePos = max(0, LOWORD(lParam) / metrics.charX - 1) + actual->strBegIndices[cursor.stringPos];
     setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
     break;
 
   case WM_MOUSEMOVE:
     if (wParam == MK_LBUTTON) {
       cursor.stringPos = HIWORD(lParam) / metrics.charY + firstString;
-      cursor.storagePos = max(0, LOWORD(lParam) / metrics.charX - 1) + cursor.stringPos;
+      cursor.storagePos = max(0, LOWORD(lParam) / metrics.charX - 1) + actual->strBegIndices[cursor.stringPos];
       setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
+    }
+    break;
+
+  case WM_CHAR:
+    if (addChar(&buffer, &cursor, wParam))
+    {
+      cursor.storagePos++;
+      viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[actual->strBegIndices[firstString]]);
+      setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
+      metricsUpdate(&metrics, actual, hwnd, firstString);
+      InvalidateRect(hwnd, NULL, TRUE);
     }
     break;
 
