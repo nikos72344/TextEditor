@@ -55,10 +55,16 @@ int viewModelUpdate(storageModel* buffer, viewModel* actual, int charCount, char
 }
 
 void saveFile(storageModel* buffer, char* path) {
-  FILE* saveFile = fopen(path, "w");
+  FILE* saveFile = fopen(path, "wb");
   if (saveFile == NULL)
     return;
-  fprintf(saveFile, "%s", buffer->buffer);
+  int i = 0;
+  for (i = 0; i < buffer->size; i++)
+  {
+    if (buffer->buffer[i] == '\r')
+      continue;
+    fwrite(&buffer->buffer[i], sizeof(char), 1, saveFile);
+  }
   fclose(saveFile);
 }
 
