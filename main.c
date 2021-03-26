@@ -107,7 +107,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
     readDll = LoadLibraryA("ReadData");
 
     ptr = (CREATESTRUCT*)lParam;
-    if (ptr->lpCreateParams != NULL)
+    if (ptr->lpCreateParams != NULL && strcmp("", ptr->lpCreateParams))
       strcpy(filePath, ptr->lpCreateParams);
 
     ofnInit(&openOfn, hwnd, filePath);
@@ -121,8 +121,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
     metrics.clientY = HIWORD(lParam);
 
     if (actual->mode == LAYOUT)
-      firstString = viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[layout.strBegIndices[firstString]]);
+      firstString = viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[layout.strBegIndices[firstString]], &cursor);
 
+    setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
     metricsUpdate(&metrics, actual, hwnd, firstString);
     break;
   case WM_PAINT:
@@ -217,9 +218,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
       break;
     case VK_RETURN:
       addReturn(&buffer, &cursor);
-      //cursor.storagePos += 2;
-      cursor.stringPos++;
-      viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[actual->strBegIndices[firstString]]);
+      viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[actual->strBegIndices[firstString]], &cursor);
       setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
       metricsUpdate(&metrics, actual, hwnd, firstString);
       InvalidateRect(hwnd, NULL, TRUE);
@@ -228,13 +227,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
     case VK_BACK:
       if (deleteChar(&buffer, &cursor))
       {
-        viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[actual->strBegIndices[firstString]]);
+        viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[actual->strBegIndices[firstString]], &cursor);
         setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
         metricsUpdate(&metrics, actual, hwnd, firstString);
         InvalidateRect(hwnd, NULL, TRUE);
       }
       break;
     }
+    cursorMove(&cursor, actual, &buffer, &metrics, wParam, &firstString);
     break;
 
   case WM_CONTEXTMENU:
@@ -268,7 +268,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
         actual = &normal;
 
-        firstString = viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[layout.strBegIndices[firstString]]);
+        firstString = viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[layout.strBegIndices[firstString]], &cursor);
+        setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
         metricsUpdate(&metrics, actual, hwnd, firstString);
         InvalidateRect(hwnd, NULL, TRUE);
       }
@@ -281,7 +282,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
         actual = &layout;
 
-        firstString = viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[normal.strBegIndices[firstString]]);
+        firstString = viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[normal.strBegIndices[firstString]], &cursor);
+        setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
         metricsUpdate(&metrics, actual, hwnd, firstString);
         InvalidateRect(hwnd, NULL, TRUE);
       }
@@ -290,7 +292,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
     }
     break;
   case WM_SETFOCUS:
-    cursorInit(&cursor, &metrics, hwnd, &buffer, actual, &firstString);
+    CreateCaret(hwnd, NULL, 2, metrics.charY);
+    setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
     ShowCaret(hwnd);
     break;
 
@@ -317,7 +320,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
     if (addChar(&buffer, &cursor, wParam))
     {
       cursor.storagePos++;
-      viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[actual->strBegIndices[firstString]]);
+      viewModelUpdate(&buffer, actual, metrics.clientX / metrics.charX, &buffer.buffer[actual->strBegIndices[firstString]], &cursor);
       setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
       metricsUpdate(&metrics, actual, hwnd, firstString);
       InvalidateRect(hwnd, NULL, TRUE);

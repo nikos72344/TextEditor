@@ -25,7 +25,7 @@ void ofnInit(OPENFILENAMEA* ofn, HWND hwnd, char* path)
   ofn->lpTemplateName = NULL;
 }
 
-int viewModelUpdate(storageModel* buffer, viewModel* actual, int charCount, char* fstr) {
+int viewModelUpdate(storageModel* buffer, viewModel* actual, int charCount, char* fstr, cursor* cursor) {
   int i, firstString = 0;
   if (actual->strBegIndices != NULL)
     free(actual->strBegIndices);
@@ -48,9 +48,12 @@ int viewModelUpdate(storageModel* buffer, viewModel* actual, int charCount, char
       actual->maxLen = ++len;
     if (fstr == &buffer->buffer[i])
       firstString = actual->strCount - 1;
+    if (i == cursor->storagePos)
+      cursor->stringPos = actual->strCount - 1;
   }
   if (actual->mode == LAYOUT)
     actual->maxLen = 0;
+  printf("%i %i\n", cursor->storagePos, cursor->stringPos);
   return firstString;
 }
 
@@ -61,8 +64,8 @@ void saveFile(storageModel* buffer, char* path) {
   int i = 0;
   for (i = 0; i < buffer->size; i++)
   {
-    if (buffer->buffer[i] == '\r')
-      continue;
+    //if (buffer->buffer[i] == '\r')
+      //continue;
     fwrite(&buffer->buffer[i], sizeof(char), 1, saveFile);
   }
   fclose(saveFile);
@@ -82,7 +85,7 @@ void loadFile(storageModel* buffer, viewModel* actual, metrics* metrics, HINSTAN
     //free(buffer->buffer);
   buffer->buffer = data;
   buffer->size = size;
-  viewModelUpdate(buffer, actual, metrics->clientX / metrics->charX, buffer->buffer);
+  viewModelUpdate(buffer, actual, metrics->clientX / metrics->charX, buffer->buffer, cursor);
   metricsReset(metrics, actual, hwnd);
   cursorReset(cursor, metrics, buffer, actual, &temp);
 }
