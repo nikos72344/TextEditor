@@ -6,8 +6,8 @@ void initMenu(HMENU* menu, HMENU* contextMenu, HWND hwnd) {
   *contextMenu = CreatePopupMenu();
   temp = CreateMenu();
   AppendMenuA(temp, MF_STRING, IDM_OPEN, "Open...");
-  AppendMenuA(temp, MF_STRING, IDM_SAVE, "Save");
   AppendMenuA(temp, MF_STRING, IDM_SAVE_AS, "Save as...");
+  AppendMenuA(temp, MF_STRING, IDM_SAVE, "Save");
   AppendMenuA(temp, MF_SEPARATOR, 0, NULL);
   AppendMenuA(temp, MF_STRING, IDM_EXIT, "Exit");
   AppendMenuA(*menu, MF_POPUP, (UINT)temp, "File");

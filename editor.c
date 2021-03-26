@@ -3,7 +3,7 @@
 
 BOOLEAN addChar(storageModel* buffer, cursor* cursor, char ch) {
   int i = 0, flag = 0;
-  if (ch == '\b')
+  if (ch == '\b' || ch == '\r')
     return FALSE;
   char* newBuffer = (char*)malloc((buffer->size + 1) * sizeof(char));
   if (newBuffer == NULL)
@@ -36,7 +36,8 @@ void addReturn(storageModel* buffer, cursor* cursor) {
   }
   //free(buffer->buffer);
   buffer->buffer = newBuffer;
-  buffer->size += 2;
+  buffer->size += flag;
+  cursor->storagePos += flag;
 }
 
 BOOLEAN deleteChar(storageModel* buffer, cursor* cursor) {
@@ -48,11 +49,18 @@ BOOLEAN deleteChar(storageModel* buffer, cursor* cursor) {
     return FALSE;
   for (i = 0; i < buffer->size; i++) {
     if (i == cursor->storagePos)
+    {
       flag = 1;
+      if (buffer->buffer[max(0, i - 1)] == '\n' && buffer->buffer[max(0, i - 2)] == '\r')
+        flag = 2;
+    }
     newBuffer[i - flag] = buffer->buffer[i];
   }
   //free(buffer->buffer);
   buffer->buffer = newBuffer;
   buffer->size--;
+  if (flag == 2)
+    buffer->size--;
+  cursor->storagePos -= flag;
   return TRUE;
 }
