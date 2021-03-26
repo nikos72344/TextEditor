@@ -1,4 +1,5 @@
 #include "cursor.h"
+#include "functions.h"
 #include <stdio.h>
 
 void cursorInit(cursor* cursor, metrics* metrics, HWND hwnd, storageModel* buffer, viewModel* actual, int* firstString) {
@@ -20,25 +21,6 @@ int getStrLen(cursor* cursor, storageModel* buffer, viewModel* actual)
   return max(len, 0);
 }
 
-void cursorLimit(cursor* cursor, storageModel* buffer, viewModel* actual, int* firstString) {
-  cursor->stringPos = max(min(max(0, cursor->stringPos), actual->strCount - 1), 0);
-  int len = getStrLen(cursor, buffer, actual);
-  cursor->storagePos = max(0, min(cursor->storagePos, actual->strBegIndices[cursor->stringPos] + len));
-  printf("%i %i\n", cursor->storagePos, actual->strBegIndices[cursor->stringPos]);
-}
-
-void setCursorPos(cursor* cursor, metrics* metrics, storageModel* buffer, viewModel* actual, int* firstString) {
-  cursorLimit(cursor, buffer, actual, firstString);
-  printf("[%i]\n", max(0, cursor->storagePos - actual->strBegIndices[cursor->stringPos]) + 1);
-  SetCaretPos(metrics->charX * (max(0, cursor->storagePos - actual->strBegIndices[cursor->stringPos]) + 1), metrics->charY * (cursor->stringPos - *firstString));
-}
-
-void cursorReset(cursor* cursor, metrics* metrics, storageModel* buffer, viewModel* actual, int* firstString) {
-  cursor->storagePos = 0;
-  cursor->stringPos = 0;
-  setCursorPos(cursor, metrics, buffer, actual, firstString);
-}
-
 void horzLimit(cursor* cursor, viewModel* actual, storageModel* buffer) {
   int len = getStrLen(cursor, buffer, actual);
   if (cursor->storagePos - actual->strBegIndices[cursor->stringPos] > len)
@@ -47,7 +29,35 @@ void horzLimit(cursor* cursor, viewModel* actual, storageModel* buffer) {
     cursor->storagePos = actual->strBegIndices[cursor->stringPos];
 }
 
-void cursorMove(cursor* cursor, viewModel* actual, storageModel* buffer, metrics* metrics, WPARAM wParam, int* firstString) {
+void keyHScroll(cursor* cursor, viewModel* actual, storageModel* buffer, metrics* metrics) {
+  if (cursor->storagePos - actual->strBegIndices[cursor->stringPos] - metrics->HscrollPos + 1 > metrics->clientX / metrics->charX)
+    metrics->HscrollPos = metrics->HscrollPos + 1;
+  if (max(0, cursor->storagePos - actual->strBegIndices[cursor->stringPos]) < metrics->HscrollPos)
+    metrics->HscrollPos = max(metrics->HscrollPos - 1, 0);
+}
+
+void cursorLimit(cursor* cursor, storageModel* buffer, viewModel* actual, int* firstString, metrics* metrics) {
+  cursor->stringPos = max(min(max(0, cursor->stringPos), actual->strCount - 1), 0);
+  int len = getStrLen(cursor, buffer, actual);
+  cursor->storagePos = max(0, min(cursor->storagePos, actual->strBegIndices[cursor->stringPos] + len));
+  horzLimit(cursor, actual, buffer);
+  keyHScroll(cursor, actual, buffer, metrics);
+  //printf("%i %i\n", cursor->storagePos, actual->strBegIndices[cursor->stringPos]);
+}
+
+void setCursorPos(cursor* cursor, metrics* metrics, storageModel* buffer, viewModel* actual, int* firstString) {
+  cursorLimit(cursor, buffer, actual, firstString, metrics);
+  //printf("[%i]\n", max(0, cursor->storagePos - actual->strBegIndices[cursor->stringPos]) + 1);
+  SetCaretPos(metrics->charX * (max(0, cursor->storagePos - actual->strBegIndices[cursor->stringPos]) + 1 - metrics->HscrollPos), metrics->charY * (cursor->stringPos - *firstString));
+}
+
+void cursorReset(cursor* cursor, metrics* metrics, storageModel* buffer, viewModel* actual, int* firstString) {
+  cursor->storagePos = 0;
+  cursor->stringPos = 0;
+  setCursorPos(cursor, metrics, buffer, actual, firstString);
+}
+
+void cursorMove(cursor* cursor, viewModel* actual, storageModel* buffer, metrics* metrics, WPARAM wParam, int* firstString, HWND hwnd) {
   int inc = cursor->storagePos - actual->strBegIndices[cursor->stringPos];
   switch (wParam) {
   case VK_LEFT:
@@ -61,15 +71,20 @@ void cursorMove(cursor* cursor, viewModel* actual, storageModel* buffer, metrics
   case VK_UP:
     cursor->stringPos = max(cursor->stringPos - 1, 0);
     cursor->storagePos = actual->strBegIndices[cursor->stringPos] + inc;
+    if (cursor->stringPos < *firstString)
+      *firstString = (*firstString) - 1;
     break;
 
   case VK_DOWN:
     cursor->stringPos = min(cursor->stringPos + 1, actual->strCount - 1);
     cursor->storagePos = actual->strBegIndices[cursor->stringPos] + inc;
+    if(cursor->stringPos > (*firstString) + metrics->clientY/metrics->charY)
+      *firstString = (*firstString) + 1;
     break;
 
   }
-
-  horzLimit(cursor, actual, buffer);
+  metricsUpdate(metrics, actual, hwnd, *firstString);
+  cursorLimit(cursor, buffer, actual, firstString, metrics);
   setCursorPos(cursor, metrics, buffer, actual, firstString);
+  InvalidateRect(hwnd, NULL, TRUE);
 }
