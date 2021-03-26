@@ -234,7 +234,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
       }
       break;
     }
-    cursorMove(&cursor, actual, &buffer, &metrics, wParam, &firstString);
+    cursorMove(&cursor, actual, &buffer, &metrics, wParam, &firstString, hwnd);
     break;
 
   case WM_CONTEXTMENU:
@@ -304,7 +304,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
   case WM_LBUTTONDOWN:
     cursor.stringPos = HIWORD(lParam) / metrics.charY + firstString;
-    cursor.storagePos = max(0, LOWORD(lParam) / metrics.charX - 1) + actual->strBegIndices[cursor.stringPos];
+    cursor.storagePos = max(0, LOWORD(lParam) / metrics.charX - 1) + actual->strBegIndices[cursor.stringPos] + metrics.HscrollPos;
     setCursorPos(&cursor, &metrics, &buffer, actual, &firstString);
     break;
 

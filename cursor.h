@@ -10,5 +10,5 @@ typedef struct {
 void cursorInit(cursor* cursor, metrics* metrics, HWND hwnd, storageModel* buffer, viewModel* actual, int* firstString);
 void setCursorPos(cursor* cursor, metrics* metrics, storageModel* buffer, viewModel* actual, int* firstString);
 void cursorReset(cursor* cursor, metrics* metrics, storageModel* buffer, viewModel* actual, int* firstString);
-void cursorMove(cursor* cursor, viewModel* actual, storageModel* buffer, metrics* metrics, WPARAM wParam, int* firstString);
+void cursorMove(cursor* cursor, viewModel* actual, storageModel* buffer, metrics* metrics, WPARAM wParam, int* firstString, HWND hwnd);
 #endif
